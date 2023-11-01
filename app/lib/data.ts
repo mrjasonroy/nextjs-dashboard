@@ -10,6 +10,8 @@ import {
 } from './definitions';
 import { formatCurrency } from './utils';
 
+import { unstable_cache as cache } from 'next/cache';
+
 import { unstable_noStore as noStore } from 'next/cache';
 
 export async function fetchRevenue() {
@@ -91,10 +93,7 @@ export async function fetchCardData() {
 }
 
 const ITEMS_PER_PAGE = 6;
-export async function fetchFilteredInvoices(
-  query: string,
-  currentPage: number,
-) {
+export async function fetchFilteredInvoices(query: string, currentPage: number) {
   noStore();
   const offset = (currentPage - 1) * ITEMS_PER_PAGE;
 
@@ -126,6 +125,30 @@ export async function fetchFilteredInvoices(
     throw new Error('Failed to fetch invoices.');
   }
 }
+
+export const fetchInvoices = cache(
+  fetchFilteredInvoices,
+  ['invoice-list'],
+  {
+    tags: ['invoice-list'],
+  }
+);
+export const fetchInvoiceCount = cache(
+  async () => {
+    noStore();
+    try {
+      const count = await sql`SELECT COUNT(*) FROM invoices`;
+      return Number(count.rows[0].count);
+    } catch (error) {
+      console.error('Database Error:', error);
+      throw new Error('Failed to fetch total number of invoices.');
+    }
+  },
+  ['invoice-list'],
+  {
+    tags: ['invoice-list'],
+  }
+);
 
 export async function fetchInvoicesPages(query: string) {
   noStore();
@@ -168,7 +191,6 @@ export async function fetchInvoiceById(id: string): Promise<InvoiceForm> {
     }));
     return invoices[0];
   } catch (error) {
-
     console.error('Database Error:', error);
     throw new Error('Database Error: Failed to fetch invoice.');
   }

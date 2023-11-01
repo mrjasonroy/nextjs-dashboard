@@ -1,7 +1,7 @@
 'use server';
 import { z } from 'zod';
 import { sql } from '@vercel/postgres';
-import { revalidatePath } from 'next/cache';
+import { revalidatePath, revalidateTag } from 'next/cache';
 import { redirect } from 'next/navigation';
 
 import { signIn } from '@/auth';
@@ -122,9 +122,10 @@ export async function updateInvoice(prevState: State, formData: FormData) {
 
 export async function deleteInvoice(formData: FormData) {
   try {
+    console.log(formData);
     const { id } = DeleteInvoice.parse({ id: formData.get('id') });
     await sql`DELETE FROM invoices WHERE id = ${id}`;
-    revalidatePath('/dashboard/invoices');
+    revalidateTag('invoice-list');
   } catch (error) {
     return {
       message: 'Database Error: Failed to Delete Invoice.',
